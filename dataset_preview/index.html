@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeRobot 数据集预览</title>
+<style>
+:root {
+  --bg: #f6f7f8; --card: #fff; --fg: #1f2328; --mut: #6b7280; --line: #e3e5e8;
+  --green: #3b915d; --orange: #d97706; --red: #c2410c; --redbg: #fef2f2; --yelbg: #fffbeb; --bluebg: #eff6ff;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 14px/1.5 "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; }
+header { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid var(--line);
+  display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 8px 16px; }
+header h1 { font-size: 16px; margin: 0; white-space: nowrap; }
+select, button, input[type=text], textarea { font: inherit; }
+select { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: #fff; max-width: 60vw; }
+button { padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; cursor: pointer; color: var(--fg); }
+button:hover { border-color: #c9cdd2; background: #fafafa; }
+button.primary { background: var(--green); border-color: var(--green); color: #fff; }
+button:disabled { opacity: .5; cursor: default; }
+.mut { color: var(--mut); }
+.small { font-size: 12px; }
+.tabs { display: flex; gap: 4px; }
+.tabs button { border: none; border-bottom: 2px solid transparent; border-radius: 0; padding: 6px 10px; }
+.tabs button.on { border-bottom-color: var(--green); color: var(--green); font-weight: 600; }
+main { padding: 16px; max-width: 1700px; margin: 0 auto; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.card h2 { font-size: 15px; margin: 0 0 10px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.stat { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.stat .v { font-size: 18px; font-weight: 600; }
+.stat .k { font-size: 12px; color: var(--mut); }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; font-size: 12px; color: var(--mut); }
+code, pre { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+pre { white-space: pre-wrap; word-break: break-all; background: #f6f8fa; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
+.issue { border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; border: 1px solid var(--line); }
+.issue.error { background: var(--redbg); border-color: #fecaca; }
+.issue.warn { background: var(--yelbg); border-color: #fde68a; }
+.issue.info { background: var(--bluebg); border-color: #bfdbfe; }
+.issue.ok { background: #f0fdf4; border-color: #bbf7d0; }
+.issue .t { font-weight: 600; }
+.issue .d { white-space: pre-wrap; font-size: 13px; color: #374151; margin-top: 2px; }
+.lv { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 9px; margin-right: 6px; color: #fff; vertical-align: 1px; }
+.lv.error { background: #dc2626; } .lv.warn { background: #d97706; } .lv.info { background: #2563eb; } .lv.ok { background: var(--green); }
+.chip { display: inline-block; padding: 0 7px; margin: 3px 4px 0 0; border-radius: 10px; background: #fff; border: 1px solid var(--line);
+  cursor: pointer; font-size: 12px; }
+.chip:hover { border-color: var(--green); color: var(--green); }
+details > summary { cursor: pointer; color: var(--mut); font-size: 12px; }
+/* 回合浏览 */
+.epwrap { display: grid; grid-template-columns: 230px 1fr; gap: 14px; align-items: start; }
+@media (max-width: 800px) { .epwrap { grid-template-columns: 1fr; } .eplist { max-height: 220px !important; } }
+.eplist { background: #fff; border: 1px solid var(--line); border-radius: 10px; position: sticky; top: 60px; max-height: calc(100vh - 80px); display: flex; flex-direction: column; }
+.eplist .filters { padding: 8px; border-bottom: 1px solid var(--line); display: flex; gap: 4px; flex-wrap: wrap; }
+.eplist .filters button { padding: 1px 8px; font-size: 12px; }
+.eplist .filters button.on { border-color: var(--green); color: var(--green); }
+.eplist .rows { overflow-y: auto; }
+.eprow { display: flex; align-items: center; gap: 6px; padding: 4px 10px; cursor: pointer; border-bottom: 1px solid #f1f2f4; font-size: 13px; }
+.eprow:hover { background: #f6f7f8; }
+.eprow.on { background: #e9f5ee; }
+.eprow .n { width: 42px; font-weight: 600; }
+.eprow .len { flex: 1; color: var(--mut); font-size: 12px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot.error { background: #dc2626; } .dot.warn { background: #d97706; } .dot.none { background: transparent; }
+.flag { color: #dc2626; font-size: 12px; }
+.vids { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+.vid { position: relative; background: #111; border-radius: 8px; overflow: hidden; aspect-ratio: 4 / 3; }
+.vid video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.vid .lab { position: absolute; left: 6px; top: 4px; color: #fff; font-size: 12px; text-shadow: 0 0 3px #000; }
+.vid .err { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fca5a5; font-size: 13px; padding: 10px; text-align: center; }
+.controls { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 10px 0 4px; }
+.controls input[type=range] { flex: 1; min-width: 200px; accent-color: var(--green); }
+.tc { font-variant-numeric: tabular-nums; min-width: 150px; }
+.charts h3 { font-size: 13px; margin: 12px 0 6px; color: var(--mut); font-weight: 600; }
+.cgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.chart { border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px 2px; background: #fff; }
+.chart .ct { display: flex; justify-content: space-between; font-size: 12px; gap: 6px; }
+.chart .ct .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chart .ct .vals { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chart canvas { width: 100%; height: 90px; display: block; cursor: crosshair; }
+.legend { font-size: 12px; color: var(--mut); }
+.legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: 3px; margin: 0 4px 0 10px; }
+.markbox { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.markbox input[type=text] { flex: 1; min-width: 200px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; }
+.vid canvas.seam { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+.seambox { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); font-size: 13px; }
+.seambox .ok { color: var(--green); } .seambox .bad { color: #dc2626; }
+.armflag { font-size: 11px; padding: 0 4px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+.armflag.risk { background: #fee2e2; color: #b91c1c; } .armflag.near { background: #fef3c7; color: #92400e; }
+.auginfo { font-size: 13px; margin: -2px 0 8px; } .auginfo a { cursor: pointer; color: #2563eb; }
+.seamflag { color: var(--green); font-size: 12px; } .seamflag.auto { color: var(--mut); }
+.toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #1f2328; color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: .92; }
+.empty { padding: 30px; text-align: center; color: var(--mut); }
+kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; font-size: 11px; background: #fff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>LeRobot 数据集预览</h1>
+  <select id="dsSel"></select>
+  <button id="rescan" title="重新扫描目录、重新读取数据集">刷新</button>
+  <div class="tabs">
+    <button data-tab="ov" class="on">概览与检查</button>
+    <button data-tab="ep">回合浏览</button>
+  </div>
+  <span id="dsPath" class="mut small"></span>
+</header>
+<main>
+  <div id="ov"></div>
+  <div id="ep" style="display:none"></div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const LV = { error: "错误", warn: "警告", info: "提示", ok: "通过" };
+const COLORS = ["#3b915d", "#d97706", "#2563eb", "#9333ea", "#db2777", "#0891b2", "#65a30d", "#dc2626", "#4b5563", "#ca8a04", "#7c3aed", "#059669", "#ea580c", "#0284c7"];
+
+let DS = null, CHECK = null, MARKS = {}, LIST = [], curEp = null, EPD = null, filter = "all";
+let player = null;
+let SEAMS = {}, HINT = null, HINT_EP = null, SEAM_KEY = null;
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1800); }
+async function api(path, opt) {
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(() => ({ error: "返回内容不是 JSON（HTTP " + r.status + "）" }));
+  if (!r.ok || j.error) throw new Error(j.error || ("HTTP " + r.status));
+  return j;
+}
+const fmtSize = b => b > 1e9 ? (b / 1e9).toFixed(2) + " GB" : b > 1e6 ? (b / 1e6).toFixed(1) + " MB" : (b / 1e3).toFixed(0) + " KB";
+const fmtDur = s => s >= 3600 ? `${Math.floor(s / 3600)} 小时 ${Math.round(s % 3600 / 60)} 分` : s >= 60 ? `${Math.floor(s / 60)} 分 ${Math.round(s % 60)} 秒` : `${s.toFixed(1)} 秒`;
+const fileUrl = rel => `/file?ds=${encodeURIComponent(DS.path)}&p=${encodeURIComponent(rel)}`;
+const shq = s => /^[A-Za-z0-9_\/.:=@%+,-]+$/.test(s) ? s : "'" + s.replace(/'/g, "'\\''") + "'";
+
+// ------------------------------------------------------------------ 状态在地址栏里，刷新后不丢
+function setHash() {
+  const h = new URLSearchParams();
+  if (DS) h.set("ds", DS.path);
+  h.set("tab", $(".tabs .on").dataset.tab);
+  if (curEp != null) h.set("ep", curEp);
+  history.replaceState(null, "", "#" + h.toString());
+}
+const HASH = new URLSearchParams(location.hash.slice(1));
+
+// ------------------------------------------------------------------ 数据集列表
+async function loadList(keep) {
+  const j = await api("/api/datasets");
+  LIST = j.datasets;
+  const sel = $("#dsSel");
+  sel.innerHTML = LIST.map(d => `<option value="${esc(d.path)}">${esc(d.name)}${d.incomplete ? "（正在生成或读不了）" : d.episodes != null ? `（${d.episodes} 条）` : d.error ? "（读不了）" : ""}</option>`).join("")
+    || `<option value="">没有找到数据集</option>`;
+  sel.title = "扫描目录: " + j.roots.join("、") + (j.empty_dirs.length ? "\n没有 meta/info.json 的目录（未列出）: " + j.empty_dirs.join("、") : "");
+  window._emptyDirs = j.empty_dirs; window._roots = j.roots;
+  const want = keep || HASH.get("ds");
+  if (want && LIST.some(d => d.path === want)) sel.value = want;
+  else { const ok = LIST.find(d => !d.incomplete && !d.error); if (ok) sel.value = ok.path; }  // 默认不打开还在生成的数据集
+  if (LIST.length) await openDataset(sel.value);
+  else $("#ov").innerHTML = `<div class="card empty">在 ${esc(j.roots.join("、"))} 下没有找到 LeRobot 数据集（含 meta/info.json 的目录）。</div>`;
+}
+
+async function openDataset(path) {
+  if (player) player.destroy();
+  player = null; CHECK = null; EPD = null;
+  $("#ov").innerHTML = `<div class="card empty">正在读取…</div>`;
+  $("#ep").innerHTML = "";
+  try { DS = await api("/api/dataset?ds=" + encodeURIComponent(path)); }
+  catch (e) { DS = null; $("#ov").innerHTML = `<div class="card issue error">读取失败：${esc(e.message)}</div>`; return; }
+  MARKS = DS.marks || {};
+  SEAMS = DS.seams || {}; HINT = null; HINT_EP = null;
+  SEAM_KEY = DS.video_keys.find(k => /scene/i.test(k)) || null;
+  $("#dsPath").textContent = DS.path;
+  const wantEp = HASH.get("ds") === DS.path && HASH.get("ep") != null ? +HASH.get("ep") : null;
+  curEp = DS.episodes.some(e => e.index === wantEp) ? wantEp : (DS.episodes[0]?.index ?? null);
+  renderOverview();
+  renderEpisodeShell();
+  setHash();
+  api("/api/check?ds=" + encodeURIComponent(path)).then(c => {
+    if (!DS || DS.path !== path) return;
+    CHECK = c; renderChecks(); renderEpList(); renderEpIssues();
+  }).catch(e => { $("#checks").innerHTML = `<div class="issue error">检查失败：${esc(e.message)}</div>`; });
+  if (curEp != null) selectEp(curEp, false);
+}
+
+// ------------------------------------------------------------------ 概览
+function renderOverview() {
+  const I = DS.info, fps = DS.fps;
+  const totalSec = (I.total_frames || 0) / fps;
+  const lens = DS.episodes.map(e => e.length).sort((a, b) => a - b);
+  const med = lens.length ? lens[Math.floor(lens.length / 2)] / fps : 0;
+  const taskCount = {};
+  DS.episodes.forEach(e => e.tasks.forEach(t => taskCount[t] = (taskCount[t] || 0) + 1));
+  const stat = (v, k) => `<div class="stat"><div class="v">${esc(v)}</div><div class="k">${esc(k)}</div></div>`;
+  const feats = Object.entries(I.features || {});
+  $("#ov").innerHTML = `
+  <div class="card">
+    <h2>${esc(DS.name)}</h2>
+    <div class="stats">
+      ${stat(I.codebase_version || "?", "格式版本")}
+      ${stat(I.total_episodes ?? "?", "回合数")}
+      ${stat((I.total_frames ?? 0).toLocaleString(), "总帧数")}
+      ${stat(fmtDur(totalSec), "总时长")}
+      ${stat(fmtDur(med), "回合时长中位数")}
+      ${stat(fps + " fps", "帧率")}
+      ${stat(I.robot_type || "（未填）", "robot_type")}
+      ${stat(fmtSize(DS.size), `占用空间（${DS.n_files} 个文件）`)}
+    </div>
+  </div>
+  <div class="card">
+    <h2>任务描述 <span class="mut small">上传后训练、筛选都靠这句话，请确认和实际内容一致</span></h2>
+    <table><tr><th style="width:80px">task_index</th><th>任务</th><th style="width:90px">回合数</th></tr>
+    ${Object.entries(DS.tasks).map(([i, t]) => `<tr><td>${i}</td><td>${esc(t)}</td><td>${taskCount[t] || 0}</td></tr>`).join("") || `<tr><td colspan=3 class="mut">没有读到任务</td></tr>`}
+    </table>
+  </div>
+  <div class="card">
+    <h2>上传前检查 <span id="checkSum" class="mut small">正在检查…</span></h2>
+    <div id="checks"><div class="mut">正在逐帧检查数据、核对视频文件，数据集大时要几秒到几十秒…</div></div>
+  </div>
+  <div class="card">
+    <h2>标记的回合 <span class="mut small">在「回合浏览」里给有问题的回合打标记；标记存在本机 ~/.cache/lerobot_preview/，不会写进数据集</span></h2>
+    <div id="markSum"></div>
+  </div>
+  <div class="card">
+    <h2>特征（features）</h2>
+    <table><tr><th>名称</th><th>类型</th><th>形状</th><th>说明</th></tr>
+    ${feats.map(([k, f]) => {
+      let desc = "";
+      if (f.dtype === "video" && f.info) desc = `${f.info["video.codec"] || ""} ${f.info["video.width"] || ""}×${f.info["video.height"] || ""} ${f.info["video.pix_fmt"] || ""} ${f.info["video.fps"] || ""}fps`;
+      else if (Array.isArray(f.names)) desc = `<details><summary>${f.names.length} 个名字</summary>${f.names.map(esc).join("、")}</details>`;
+      const inStats = DS.stats_keys.includes(k) || ["timestamp", "frame_index", "episode_index", "index", "task_index"].includes(k);
+      return `<tr><td><code>${esc(k)}</code>${inStats ? "" : ` <span class="flag" title="stats.json 里没有这个特征">无统计量</span>`}</td><td>${esc(f.dtype)}</td><td>${esc(JSON.stringify(f.shape))}</td><td class="small">${desc}</td></tr>`;
+    }).join("")}
+    </table>
+    <details style="margin-top:8px"><summary>info.json 原文</summary><pre>${esc(JSON.stringify(I, null, 2))}</pre></details>
+    ${(window._emptyDirs || []).length ? `<p class="mut small">另外，这些目录里没有 meta/info.json，没有列出：${esc(window._emptyDirs.join("、"))}</p>` : ""}
+  </div>`;
+  renderMarkSummary();
+}
+
+function epChips(eps, det) {
+  const max = 60;
+  const s = eps.slice(0, max).map(e => `<span class="chip" data-ep="${e}" title="${esc(det?.[e] || "")}">#${e}</span>`).join("");
+  return s + (eps.length > max ? ` <span class="mut small">等 ${eps.length} 个</span>` : "");
+}
+
+function renderChecks() {
+  const c = CHECK;
+  const n = c.counts;
+  $("#checkSum").innerHTML = `<span class="lv error">${n.error} 错误</span><span class="lv warn">${n.warn} 警告</span><span class="lv info">${n.info} 提示</span><span class="mut">用时 ${c.seconds} 秒${c.ffprobe ? "" : "，没有 ffprobe"}</span>`;
+  const verdict = n.error ? `<div class="issue error"><span class="t">有 ${n.error} 项错误，建议先处理再上传。</span></div>`
+    : n.warn ? `<div class="issue warn"><span class="t">没有格式错误；有 ${n.warn} 项警告，请逐条看一下是否影响训练。</span></div>`
+    : `<div class="issue ok"><span class="t">没有发现问题，可以上传。</span></div>`;
+  const per = c.per_episode;
+  $("#checks").innerHTML = verdict + c.items.map(it => {
+    const det = {};
+    it.episodes.forEach(e => { const x = (per[e] || []).find(y => y.title === it.title); if (x && x.detail) det[e] = x.detail; });
+    const detLines = Object.keys(det).length ? `<details><summary>逐个回合的情况</summary><div class="d">${it.episodes.filter(e => det[e]).slice(0, 200).map(e => `#${e}：${esc(det[e])}`).join("\n")}</div></details>` : "";
+    return `<div class="issue ${it.level}"><span class="lv ${it.level}">${LV[it.level]}</span><span class="t">${esc(it.title)}</span>
+      ${it.detail ? `<div class="d">${esc(it.detail)}</div>` : ""}
+      ${it.episodes.length ? `<div>${epChips(it.episodes, det)}</div>` : ""}${detLines}</div>`;
+  }).join("");
+}
+
+function renderMarkSummary() {
+  const el = $("#markSum"); if (!el) return;
+  const bad = Object.entries(MARKS).filter(([, v]) => v.bad).map(([k]) => +k).sort((a, b) => a - b);
+  const noted = Object.entries(MARKS).filter(([, v]) => v.note).map(([k, v]) => [+k, v]).sort((a, b) => a[0] - b[0]);
+  if (!bad.length && !noted.length) { el.innerHTML = `<div class="mut">还没有标记。</div>`; return; }
+  const name = DS.name, root = DS.path;
+  const newRoot = root.replace(/\/$/, "") + "_clean";
+  const cmd = `lerobot-edit-dataset \\\n  --repo_id local/${shq(name)} --root ${shq(root)} \\\n  --new_repo_id local/${shq(name)}_clean --new_root ${shq(newRoot)} \\\n  --operation.type delete_episodes \\\n  --operation.episode_indices "[${bad.join(", ")}]"`;
+  el.innerHTML = `
+    ${bad.length ? `<p>标为「不要」的回合（${bad.length} 个）：${epChips(bad)}</p>
+    <p class="small mut">要去掉它们，可以在 lerobot 环境里运行下面的命令。它把剩下的回合另存成新数据集 <code>${esc(newRoot)}</code>（编号会重排、自动重算 stats），原数据集不动；确认新数据集没问题后再上传新的那个。这个页面不会替您执行任何命令。</p>
+    <pre id="delCmd">${esc(cmd)}</pre><button id="copyCmd">复制命令</button>` : ""}
+    ${noted.length ? `<table style="margin-top:10px"><tr><th style="width:110px">回合</th><th>备注</th></tr>${noted.map(([k, v]) => `<tr><td><span class="chip" data-ep="${k}">#${k}</span>${v.bad ? ` <span class="flag">不要</span>` : ""}</td><td>${esc(v.note)}</td></tr>`).join("")}</table>` : ""}`;
+  const b = $("#copyCmd");
+  if (b) b.onclick = () => copyText($("#delCmd").textContent);
+}
+
+function copyText(t) {
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(() => toast("已复制"));
+  else { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); toast("已复制"); }
+}
+
+document.addEventListener("click", ev => {
+  const c = ev.target.closest(".chip[data-ep]");
+  if (c) { showTab("ep"); selectEp(+c.dataset.ep); }
+});
+
+// ------------------------------------------------------------------ 回合浏览
+function epLevel(i) {
+  const l = CHECK?.per_episode?.[i];
+  if (!l) return "none";
+  return l.some(x => x.level === "error") ? "error" : l.some(x => x.level === "warn") ? "warn" : "none";
+}
+
+function renderEpisodeShell() {
+  if (!DS.episodes.length) { $("#ep").innerHTML = `<div class="card empty">这个数据集没有回合。</div>`; return; }
+  $("#ep").innerHTML = `
+  <div class="epwrap">
+    <div class="eplist">
+      <div class="filters">
+        <button data-f="all" class="on">全部</button><button data-f="issue">有问题</button><button data-f="mark">已标记</button>${SEAM_KEY ? `<button data-f="noseam" title="还没有标分界线的回合">未标线</button>` : ""}${Object.values(DS.aug || {}).some(v => v.risk) ? `<button data-f="arm" title="两只手在场景画面上离得很近的合成回合（红：可能相撞，黄：较近）">可能碰撞</button>` : ""}
+      </div>
+      <div class="rows" id="epRows"></div>
+    </div>
+    <div>
+      <div class="card" style="padding-bottom:8px">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline">
+          <h2 id="epTitle" style="margin:0"></h2>
+          <span class="small mut"><kbd>空格</kbd> 播放/暂停　<kbd>←</kbd><kbd>→</kbd> 逐帧（加 Shift 跳 1 秒）　<kbd>↑</kbd><kbd>↓</kbd> 上/下一个回合　<kbd>X</kbd> 标记不要</span>
+        </div>
+        <div id="epTask" class="small" style="margin:4px 0 8px"></div>
+        <div id="augInfo" class="auginfo"></div>
+        <div id="epIssues"></div>
+        <div class="vids" id="vids"></div>
+        <div class="controls">
+          <button id="bPrevEp" title="上一个回合">上一条</button>
+          <button id="bPlay" class="primary" style="min-width:64px">播放</button>
+          <button id="bBack" title="上一帧">◀</button><button id="bFwd" title="下一帧">▶</button>
+          <button id="bNextEp" title="下一个回合">下一条</button>
+          <input type="range" id="slider" min="0" max="0" value="0" step="1">
+          <span class="tc" id="tc"></span>
+          <select id="rate" title="播放速度"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+          <label class="small"><input type="checkbox" id="loop"> 循环</label>
+        </div>
+        <div class="markbox">
+          <label><input type="checkbox" id="mBad"> 这个回合不要</label>
+          <input type="text" id="mNote" placeholder="备注（例如：第 30 秒夹爪没夹住）">
+          <span class="small mut" id="mState"></span>
+        </div>
+        ${SEAM_KEY ? `<div class="seambox">
+          <b>分界线</b>
+          <label><input type="checkbox" id="sShow" checked> 显示</label>
+          ${DS.seam_hints ? `<label title="蓝色：左臂这条里到过的地方和木块杯垫、绿盘；橙色：右臂到过的地方、停靠位置和海绵杯垫、蓝盘（快捷键 L）"><input type="checkbox" id="sHint" checked> 手臂活动区域</label>
+          <button id="sAuto" title="用自动算出的线（离两边最远的那条）">用自动线</button>` : ""}
+          <button id="sClear">清除</button>
+          <label title="两只手在画面里怎么画都分不开时勾上，合成数据时不用这一条"><input type="checkbox" id="sSkip"> 这条不参与合成</label>
+          <span id="sState"></span>
+          <span class="small mut" style="flex-basis:100%">在场景画面上按住拖动画一条线（会自动延长到上下边）；拖两端的圆点微调，拖线身平移。线左边归左臂、右边归右臂，松开鼠标自动保存。</span>
+        </div>` : ""}
+      </div>
+      <div class="card charts" id="charts"><div class="mut">正在读取…</div></div>
+    </div>
+  </div>`;
+  $("#ep .filters").onclick = ev => {
+    const b = ev.target.closest("button[data-f]"); if (!b) return;
+    filter = b.dataset.f; $("#ep .filters .on").classList.remove("on"); b.classList.add("on"); renderEpList();
+  };
+  $("#bPrevEp").onclick = () => stepEp(-1);
+  $("#bNextEp").onclick = () => stepEp(1);
+  $("#bPlay").onclick = () => player && player.toggle();
+  $("#bBack").onclick = () => player && player.step(-1);
+  $("#bFwd").onclick = () => player && player.step(1);
+  $("#slider").oninput = ev => player && player.seek(+ev.target.value);
+  $("#rate").onchange = ev => player && player.setRate(+ev.target.value);
+  $("#mBad").onchange = () => saveMark();
+  let tmr; $("#mNote").oninput = () => { $("#mState").textContent = "…"; clearTimeout(tmr); tmr = setTimeout(saveMark, 600); };
+  if (SEAM_KEY) {
+    $("#sShow").onchange = () => player?.seam?.draw();
+    if ($("#sHint")) $("#sHint").onchange = () => player?.seam?.draw();
+    if ($("#sAuto")) $("#sAuto").onclick = () => { if (HINT && HINT_EP === curEp) { SEAMS[curEp] = HINT.auto.slice(); saveSeams(); player?.seam?.draw(); } };
+    $("#sClear").onclick = () => { delete SEAMS[curEp]; saveSeams(); player?.seam?.draw(); };
+    $("#sSkip").onchange = ev => { if (ev.target.checked) SEAMS[curEp] = "skip"; else delete SEAMS[curEp]; saveSeams(); player?.seam?.draw(); };
+  }
+  renderEpList();
+}
+
+function visibleEps() {
+  return DS.episodes.filter(e => filter === "all" ? true
+    : filter === "issue" ? epLevel(e.index) !== "none"
+    : filter === "noseam" ? !SEAMS[e.index]
+    : filter === "arm" ? ["risk", "near"].includes(DS.aug?.[e.index]?.risk)
+    : (MARKS[e.index]?.bad || MARKS[e.index]?.note));
+}
+
+function renderEpList() {
+  const rows = $("#epRows"); if (!rows) return;
+  const fps = DS.fps;
+  rows.innerHTML = visibleEps().map(e => {
+    const m = MARKS[e.index];
+    return `<div class="eprow${e.index === curEp ? " on" : ""}" data-i="${e.index}">
+      <span class="dot ${epLevel(e.index)}"></span><span class="n">#${e.index}</span>
+      <span class="len">${(e.length / fps).toFixed(1)} 秒 · ${e.length} 帧</span>
+      ${(a => a && (a.risk === "risk" || a.risk === "near") ? `<span class="armflag ${a.risk}" title="两臂在画面上最近 ${a.arm_min_dist_px} 像素（第 ${a.arm_min_dist_t} 秒）">${a.arm_min_dist_px}px</span>` : "")(DS.aug?.[e.index])}
+      ${SEAMS[e.index] === "skip" ? `<span class="seamflag auto" title="不参与合成">⊘</span>` : SEAMS[e.index] ? `<span class="seamflag" title="已标分界线">⟋</span>` : ""}
+      ${m?.bad ? `<span class="flag" title="${esc(m.note || "")}">✕</span>` : m?.note ? `<span class="mut" title="${esc(m.note)}">✎</span>` : ""}
+    </div>`;
+  }).join("") || `<div class="empty small">没有符合条件的回合</div>`;
+  rows.onclick = ev => { const r = ev.target.closest(".eprow"); if (r) selectEp(+r.dataset.i); };
+  const on = $(".eprow.on", rows); if (on) on.scrollIntoView({ block: "nearest" });
+}
+
+function renderEpIssues() {
+  const el = $("#epIssues"); if (!el || curEp == null) return;
+  const l = CHECK?.per_episode?.[curEp] || [];
+  el.innerHTML = l.map(x => `<div class="issue ${x.level}" style="padding:4px 10px;margin-bottom:6px"><span class="lv ${x.level}">${LV[x.level]}</span><span class="t">${esc(x.title)}</span>${x.detail ? `<span class="small">：${esc(x.detail)}</span>` : ""}</div>`).join("");
+}
+
+function stepEp(d) {
+  const v = visibleEps().map(e => e.index);
+  let i = v.indexOf(curEp);
+  if (i < 0) i = d > 0 ? -1 : v.length;
+  const n = v[i + d];
+  if (n != null) selectEp(n);
+}
+
+async function selectEp(i, scroll = true) {
+  if (!DS) return;
+  const meta = DS.episodes.find(e => e.index === i);
+  if (!meta) return;
+  curEp = i; setHash();
+  document.querySelectorAll(".eprow.on").forEach(r => r.classList.remove("on"));
+  const row = document.querySelector(`.eprow[data-i="${i}"]`);
+  if (row) { row.classList.add("on"); if (scroll) row.scrollIntoView({ block: "nearest" }); }
+  $("#epTitle").textContent = `回合 #${i}`;
+  $("#epTask").innerHTML = `<span class="mut">任务：</span>${esc(meta.tasks.join(" ／ ")) || "（无）"}　<span class="mut">${meta.length} 帧 · ${(meta.length / DS.fps).toFixed(2)} 秒 · ${esc(meta.data_file || "")}</span>`;
+  const m = MARKS[i] || {};
+  $("#mBad").checked = !!m.bad; $("#mNote").value = m.note || ""; $("#mState").textContent = "";
+  renderEpIssues();
+  if (player) player.destroy();
+  player = new Player(meta);
+  const a = DS.aug?.[i], ai = $("#augInfo");
+  if (ai) ai.innerHTML = !a ? "" : `<span class="mut">合成：</span>${a.kind === "fused" ? `左臂取自 #${a.left}，右臂取自 #${a.right}，分界线 [${a.line}]（${esc(a.line_from || "")}）` : a.kind === "mixr" ? `取自 #${a.src}，右侧来自 #${a.donor}` : `原始 #${a.src}`}`
+    + (a.risk ? `　<span class="armflag ${a.risk === "ok" ? "" : a.risk}">两臂最近 ${a.arm_min_dist_px ?? "—"} 像素</span>`
+      + (a.arm_min_dist_px != null ? `　<a id="augJump">跳到第 ${a.arm_min_dist_t} 秒</a>` : "")
+      + `　<span class="mut">小于 ${DS.arm_near_px} 像素共 ${a.arm_close_s} 秒；越线 左 ${a.left_over_line_px} / 右 ${a.right_over_line_px} 像素</span>` : "");
+  const j = $("#augJump"); if (j) j.onclick = () => player && (player.pause(), player.seek(Math.round(a.arm_min_dist_t * DS.fps)));
+  if (SEAM_KEY && DS.seam_hints) {
+    HINT = null; HINT_EP = null;
+    api(`/api/seamhint?ds=${encodeURIComponent(DS.path)}&ep=${i}`).then(h => {
+      if (curEp !== i) return; HINT = h; HINT_EP = i; player?.seam?.draw();
+    }).catch(e => { if (curEp === i) $("#sState").textContent = "手臂活动区域读不到：" + e.message; });
+  }
+  $("#charts").innerHTML = `<div class="mut">正在读取回合数据…</div>`;
+  try {
+    const d = await api(`/api/episode?ds=${encodeURIComponent(DS.path)}&ep=${i}`);
+    if (curEp !== i) return;
+    EPD = d; renderCharts(d); player.update(true);
+  } catch (e) { if (curEp === i) $("#charts").innerHTML = `<div class="issue error">读取回合数据失败：${esc(e.message)}</div>`; }
+}
+
+async function saveSeams() {
+  try {
+    const r = await api("/api/seams?ds=" + encodeURIComponent(DS.path), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ seams: SEAMS }) });
+    SEAMS = r.seams;
+    const v = Object.values(SEAMS), nl = v.filter(x => x !== "skip").length;
+    toast(`已保存：${nl} 条有分界线，${v.length - nl} 条不参与，共 ${DS.episodes.length} 条`);
+  } catch (e) { toast("分界线保存失败：" + e.message); }
+  renderEpList(); player?.seam?.draw();
+}
+
+// ------------------------------------------------------------------ 分界线编辑：线用 [xt, xb] 表示（第一行、最后一行的 x）
+class SeamEditor {
+  constructor(wrap, video) {
+    this.wrap = wrap; this.video = video;
+    this.cv = document.createElement("canvas"); this.cv.className = "seam"; wrap.appendChild(this.cv);
+    this.drag = null;
+    this.cv.addEventListener("pointerdown", ev => this.down(ev));
+    this.cv.addEventListener("pointermove", ev => this.move(ev));
+    this.cv.addEventListener("pointerup", ev => this.up(ev));
+    this.cv.addEventListener("pointercancel", () => { this.drag = null; });
+    this.ro = new ResizeObserver(() => this.draw()); this.ro.observe(wrap);
+    video.addEventListener("loadedmetadata", () => this.draw());
+  }
+  destroy() { this.ro.disconnect(); }
+  dims() { return { W: this.video.videoWidth || HINT?.W || 640, H: this.video.videoHeight || HINT?.H || 480 }; }
+  // 画面按 object-fit: contain 摆放
+  box() {
+    const r = this.cv.getBoundingClientRect(), { W, H } = this.dims();
+    const s = Math.min(r.width / W, r.height / H);
+    return { r, s, ox: (r.width - W * s) / 2, oy: (r.height - H * s) / 2 };
+  }
+  toImg(ev) { const b = this.box(); return { x: (ev.clientX - b.r.left - b.ox) / b.s, y: (ev.clientY - b.r.top - b.oy) / b.s }; }
+  xAt(l, y) { const { H } = this.dims(); return l[0] + (l[1] - l[0]) * y / (H - 1); }
+  down(ev) {
+    if (curEp == null || !$("#sShow")?.checked || SEAMS[curEp] === "skip") return;
+    const p = this.toImg(ev), { H } = this.dims(), l = SEAMS[curEp], tol = 14 / this.box().s;
+    this.cv.setPointerCapture(ev.pointerId);
+    if (l && Math.hypot(p.x - l[0], p.y - 0) < tol * 1.6) this.drag = { kind: "top" };
+    else if (l && Math.hypot(p.x - l[1], p.y - (H - 1)) < tol * 1.6) this.drag = { kind: "bot" };
+    else if (l && Math.abs(p.x - this.xAt(l, p.y)) < tol) this.drag = { kind: "move", p0: p, l0: l.slice() };
+    else this.drag = { kind: "new", p0: p };
+  }
+  move(ev) {
+    if (!this.drag) return;
+    const p = this.toImg(ev), { H } = this.dims(), d = this.drag;
+    if (d.kind === "top") SEAMS[curEp] = [p.x, SEAMS[curEp][1]];
+    else if (d.kind === "bot") SEAMS[curEp] = [SEAMS[curEp][0], p.x];
+    else if (d.kind === "move") SEAMS[curEp] = [d.l0[0] + p.x - d.p0.x, d.l0[1] + p.x - d.p0.x];
+    else {
+      const dy = p.y - d.p0.y; if (Math.abs(dy) < 8) return;   // 太短时不知道方向
+      const k = (p.x - d.p0.x) / dy;                           // x 随 y 的斜率，延长到上下边
+      SEAMS[curEp] = [d.p0.x - k * d.p0.y, d.p0.x + k * (H - 1 - d.p0.y)];
+      d.moved = true;
+    }
+    this.draw();
+  }
+  up() {
+    const d = this.drag; this.drag = null;
+    if (!d || (d.kind === "new" && !d.moved)) return;
+    SEAMS[curEp] = SEAMS[curEp].map(v => Math.round(v * 10) / 10);
+    saveSeams();
+  }
+  margins(l) {
+    if (!HINT || HINT_EP !== curEp) return null;
+    let a = Infinity, b = Infinity;
+    for (const [y, x] of HINT.A) a = Math.min(a, this.xAt(l, y) - x);
+    for (const [y, x] of HINT.B) b = Math.min(b, x - this.xAt(l, y));
+    return { a, b };
+  }
+  draw() {
+    const dpr = window.devicePixelRatio || 1, cv = this.cv;
+    const w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    const st = $("#sState"); if (!$("#sShow")?.checked) { if (st) st.textContent = ""; return; }
+    const b = this.box(), { H } = this.dims(), P = (x, y) => [b.ox + x * b.s, b.oy + y * b.s];
+    if (HINT && HINT_EP === curEp && $("#sHint")?.checked) {
+      const r = Math.max(2, 8 * b.s);
+      g.fillStyle = "rgba(37,99,235,0.33)"; for (const [y, x] of HINT.A) g.fillRect(...P(x - 4, y - 4), r, r);
+      g.fillStyle = "rgba(234,88,12,0.33)"; for (const [y, x] of HINT.B) g.fillRect(...P(x - 4, y - 4), r, r);
+    }
+    const skip = SEAMS[curEp] === "skip"; if ($("#sSkip")) $("#sSkip").checked = skip;
+    if (skip) { if (st) st.innerHTML = `<span class="mut">这一条不参与合成（取消勾选才能画线）</span>`; return; }
+    const l = SEAMS[curEp];
+    const shown = l || (HINT && HINT_EP === curEp ? HINT.auto : null);
+    if (shown) {
+      const m = this.margins(shown), bad = m && (m.a < 0 || m.b < 0);
+      g.save(); g.lineWidth = 2.5; g.strokeStyle = bad ? "#dc2626" : l ? "#22c55e" : "rgba(255,255,255,0.8)"; if (!l) g.setLineDash([8, 6]);
+      g.beginPath(); g.moveTo(...P(shown[0], 0)); g.lineTo(...P(shown[1], H - 1)); g.stroke(); g.restore();
+      if (l) { g.fillStyle = bad ? "#dc2626" : "#22c55e"; for (const [x, y] of [[l[0], 0], [l[1], H - 1]]) { g.beginPath(); g.arc(...P(x, y), 7, 0, 7); g.fill(); } }
+      g.font = "12px sans-serif"; g.fillStyle = "#fff"; g.shadowColor = "#000"; g.shadowBlur = 3;
+      g.fillText("左臂", ...P(Math.max(10, shown[0] - 60), 30)); g.fillText("右臂", ...P(shown[0] + 20, 30)); g.shadowBlur = 0;
+      if (st) {
+        const what = l ? `已标注 [${l[0].toFixed(0)}, ${l[1].toFixed(0)}]` : "未标注（虚线是自动线，可以点「用自动线」直接采用）";
+        st.innerHTML = esc(what) + (m ? `　<span class="${m.a < 0 ? "bad" : "ok"}">左侧离线 ${m.a.toFixed(0)} 像素</span>　<span class="${m.b < 0 ? "bad" : "ok"}">右侧离线 ${m.b.toFixed(0)} 像素</span>${bad ? `　<span class="bad">（负数表示越线）</span>` : ""}` : "");
+      }
+    } else if (st) st.textContent = "未标注";
+  }
+}
+
+async function saveMark() {
+  if (curEp == null) return;
+  const bad = $("#mBad").checked, note = $("#mNote").value.trim();
+  if (bad || note) MARKS[curEp] = { bad, note }; else delete MARKS[curEp];
+  try {
+    const r = await api("/api/marks?ds=" + encodeURIComponent(DS.path), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ marks: MARKS }) });
+    MARKS = r.marks; $("#mState").textContent = "已保存";
+  } catch (e) { $("#mState").textContent = "保存失败：" + e.message; }
+  renderEpList(); renderMarkSummary();
+}
+
+// ------------------------------------------------------------------ 播放器：以第一路视频为时钟，其余视频跟随
+class Player {
+  constructor(meta) {
+    this.meta = meta; this.fps = DS.fps; this.n = meta.length; this.frame = 0; this.playing = false; this.rate = +$("#rate").value;
+    this.vids = [];
+    const box = $("#vids"); box.innerHTML = "";
+    for (const k of DS.video_keys) {
+      const v = meta.videos[k]; if (!v) continue;
+      const wrap = document.createElement("div"); wrap.className = "vid";
+      wrap.innerHTML = `<video muted playsinline preload="auto"></video><div class="lab">${esc(k.replace(/^observation\.images\./, ""))}</div>`;
+      const el = $("video", wrap);
+      el.addEventListener("error", () => { wrap.insertAdjacentHTML("beforeend", `<div class="err">视频读不了：${esc(v.file)}<br>（文件缺失或浏览器不支持这种编码）</div>`); });
+      el.addEventListener("loadedmetadata", () => { this.seek(this.frame); });
+      el.src = fileUrl(v.file);
+      box.appendChild(wrap);
+      if (k === SEAM_KEY) { this.seam = new SeamEditor(wrap, el); if (DS.seam_hints) { wrap.style.gridColumn = "1 / -1"; box.prepend(wrap); } }
+      this.vids.push({ el, from: v.from || 0 });
+    }
+    if (!this.vids.length) box.innerHTML = `<div class="mut small">这个数据集没有视频特征。</div>`;
+    const s = $("#slider"); s.max = Math.max(0, this.n - 1); s.value = 0;
+    this.onKey = ev => this.key(ev); document.addEventListener("keydown", this.onKey);
+    this.raf = null; this.update(true);
+  }
+  destroy() {
+    this.pause(); document.removeEventListener("keydown", this.onKey);
+    this.seam?.destroy();
+    this.vids.forEach(v => { v.el.removeAttribute("src"); v.el.load(); });
+  }
+  time(f) { return (f + 0.5) / this.fps; } // 取帧中间，避免落到上一帧
+  seek(f) {
+    f = Math.max(0, Math.min(this.n - 1, Math.round(f)));
+    this.frame = f;
+    for (const v of this.vids) if (v.el.readyState >= 1) v.el.currentTime = v.from + this.time(f);
+    if (this.playing) this.t0 = { wall: performance.now(), frame: f };
+    this.update();
+  }
+  step(d) { this.pause(); this.seek(this.frame + d); }
+  setRate(r) { this.rate = r; this.vids.forEach(v => v.el.playbackRate = r); if (this.playing) this.t0 = { wall: performance.now(), frame: this.frame }; }
+  toggle() { this.playing ? this.pause() : this.play(); }
+  play() {
+    if (this.frame >= this.n - 1) this.seek(0);
+    this.playing = true; $("#bPlay").textContent = "暂停";
+    this.t0 = { wall: performance.now(), frame: this.frame };
+    this.vids.forEach(v => { v.el.playbackRate = this.rate; v.el.play().catch(() => {}); });
+    const tick = () => { if (!this.playing) return; this.tick(); this.raf = requestAnimationFrame(tick); };
+    this.raf = requestAnimationFrame(tick);
+  }
+  pause() {
+    this.playing = false; cancelAnimationFrame(this.raf);
+    this.vids.forEach(v => v.el.pause());
+    const b = $("#bPlay"); if (b) b.textContent = "播放";
+  }
+  tick() {
+    let f;
+    const m = this.vids.find(v => v.el.readyState >= 2);
+    if (m && !m.el.paused) f = (m.el.currentTime - m.from) * this.fps - 0.5;
+    else f = this.t0.frame + (performance.now() - this.t0.wall) / 1000 * this.fps * this.rate; // 没有视频或视频还在缓冲
+    f = Math.floor(f + 0.5);
+    if (f >= this.n - 1) {
+      if ($("#loop").checked) { this.seek(0); this.vids.forEach(v => v.el.play().catch(() => {})); return; }
+      this.pause(); this.seek(this.n - 1); return;
+    }
+    this.frame = Math.max(0, f);
+    if (m) for (const v of this.vids) {
+      if (v === m || v.el.readyState < 1) continue;
+      const want = v.from + (m.el.currentTime - m.from);
+      if (Math.abs(v.el.currentTime - want) > 1.5 / this.fps) v.el.currentTime = want;
+      if (v.el.paused) v.el.play().catch(() => {});
+    }
+    this.update();
+  }
+  update(force) {
+    const s = $("#slider"); if (s && +s.value !== this.frame) s.value = this.frame;
+    const tc = $("#tc");
+    if (tc) tc.textContent = `帧 ${this.frame} / ${this.n - 1}　${(this.frame / this.fps).toFixed(2)} 秒`;
+    drawCursor(this.frame, force);
+  }
+  key(ev) {
+    const tg = ev.target;
+    if (tg && tg.matches && tg.matches("input[type=text], textarea, select")) return;
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if ($("#ep").style.display === "none") return;
+    const k = ev.key;
+    if (k === " ") { ev.preventDefault(); this.toggle(); }
+    else if (k === "ArrowLeft") { ev.preventDefault(); this.step(ev.shiftKey ? -this.fps : -1); }
+    else if (k === "ArrowRight") { ev.preventDefault(); this.step(ev.shiftKey ? this.fps : 1); }
+    else if (k === "ArrowUp") { ev.preventDefault(); stepEp(-1); }
+    else if (k === "ArrowDown") { ev.preventDefault(); stepEp(1); }
+    else if ((k === "l" || k === "L") && $("#sHint")) { const c = $("#sHint"); c.checked = !c.checked; this.seam?.draw(); }
+    else if (k === "x" || k === "X") { const c = $("#mBad"); c.checked = !c.checked; saveMark(); toast(c.checked ? `#${curEp} 标为不要` : `#${curEp} 取消标记`); }
+  }
+}
+
+// ------------------------------------------------------------------ 曲线
+let CHARTS = [];
+function renderCharts(d) {
+  CHARTS = [];
+  const box = $("#charts");
+  const S = d.series, names = DS.names;
+  const keys = Object.keys(S);
+  if (!keys.length) { box.innerHTML = `<div class="mut">没有数值特征。</div>`; return; }
+  // observation.state 和 action 维数和名字一致时，按关节画在一起
+  const st = keys.find(k => k === "observation.state") , ac = keys.find(k => k === "action");
+  const paired = st && ac && JSON.stringify(names[st]) === JSON.stringify(names[ac]);
+  let html = "";
+  const groups = [];
+  if (paired) {
+    html += `<div class="legend">每个关节一张小图：<i style="border-color:${COLORS[0]}"></i>observation.state <i style="border-color:${COLORS[1]};border-top-style:dashed"></i>action　<span>点击或拖动曲线可以跳到对应的帧</span></div>`;
+    const nm = names[st];
+    const byPrefix = {};
+    nm.forEach((n, j) => { const p = n.includes("_") ? n.split("_")[0] : ""; (byPrefix[p] = byPrefix[p] || []).push(j); });
+    const prefixes = Object.keys(byPrefix);
+    for (const p of (prefixes.length <= 4 ? prefixes : [""])) {
+      const idx = prefixes.length <= 4 ? byPrefix[p] : nm.map((_, j) => j);
+      groups.push({ title: p, items: idx.map(j => ({ name: nm[j], lines: [{ y: S[st][j], c: COLORS[0], lab: "state" }, { y: S[ac][j], c: COLORS[1], dash: true, lab: "action" }] })) });
+    }
+  }
+  for (const k of keys) {
+    if (paired && (k === st || k === ac)) continue;
+    const nm = names[k] || S[k].map((_, j) => `${k}[${j}]`);
+    groups.push({ title: k, items: S[k].map((y, j) => ({ name: nm[j], lines: [{ y, c: COLORS[2], lab: "" }] })) });
+  }
+  groups.forEach((g, gi) => {
+    html += (g.title ? `<h3>${esc(g.title)}</h3>` : "") + `<div class="cgrid">` + g.items.map((it, ii) =>
+      `<div class="chart"><div class="ct"><span class="nm" title="${esc(it.name)}">${esc(it.name)}</span><span class="vals" id="v_${gi}_${ii}"></span></div><canvas id="c_${gi}_${ii}"></canvas></div>`).join("") + `</div>`;
+  });
+  box.innerHTML = html;
+  groups.forEach((g, gi) => g.items.forEach((it, ii) => {
+    const cv = $(`#c_${gi}_${ii}`);
+    const ch = { cv, val: $(`#v_${gi}_${ii}`), lines: it.lines, n: d.n, bg: null };
+    CHARTS.push(ch);
+    let drag = false;
+    const go = ev => { if (!player) return; const r = cv.getBoundingClientRect(); player.pause(); player.seek((ev.clientX - r.left) / r.width * (ch.n - 1)); };
+    cv.onpointerdown = ev => { drag = true; cv.setPointerCapture(ev.pointerId); go(ev); };
+    cv.onpointermove = ev => { if (drag) go(ev); };
+    cv.onpointerup = () => { drag = false; };
+  }));
+  layoutCharts();
+}
+
+function layoutCharts() {
+  const dpr = window.devicePixelRatio || 1;
+  for (const ch of CHARTS) {
+    const w = ch.cv.clientWidth, h = ch.cv.clientHeight;
+    if (!w) continue;
+    ch.cv.width = Math.round(w * dpr); ch.cv.height = Math.round(h * dpr);
+    // 先把曲线画到离屏画布上，播放时只叠加游标
+    const bg = document.createElement("canvas"); bg.width = ch.cv.width; bg.height = ch.cv.height;
+    const g = bg.getContext("2d"); g.scale(dpr, dpr);
+    let lo = Infinity, hi = -Infinity;
+    for (const l of ch.lines) for (const v of l.y) if (v != null) { if (v < lo) lo = v; if (v > hi) hi = v; }
+    if (!isFinite(lo)) { lo = 0; hi = 1; }
+    if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
+    const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+    ch.lo = lo; ch.hi = hi; ch.w = w; ch.h = h;
+    g.strokeStyle = "#eef0f2"; g.lineWidth = 1;
+    if (lo < 0 && hi > 0) { const y0 = h - (0 - lo) / (hi - lo) * h; g.beginPath(); g.moveTo(0, y0); g.lineTo(w, y0); g.stroke(); }
+    g.fillStyle = "#9ca3af"; g.font = "10px sans-serif";
+    g.fillText(fmtNum(hi - pad), 2, 10); g.fillText(fmtNum(lo + pad), 2, h - 3);
+    for (const l of ch.lines) {
+      g.strokeStyle = l.c; g.lineWidth = 1.3; g.setLineDash(l.dash ? [4, 3] : []);
+      g.beginPath(); let pen = false;
+      const n = l.y.length, step = Math.max(1, Math.floor(n / (w * 2)));
+      for (let i = 0; i < n; i += step) {
+        const v = l.y[i];
+        if (v == null) { pen = false; continue; }
+        const x = i / Math.max(1, ch.n - 1) * w, y = h - (v - lo) / (hi - lo) * h;
+        pen ? g.lineTo(x, y) : g.moveTo(x, y); pen = true;
+      }
+      g.stroke();
+      // NaN 处画红色竖线
+      g.setLineDash([]);
+      for (let i = 0; i < n; i++) if (l.y[i] == null) { g.fillStyle = "rgba(220,38,38,.35)"; g.fillRect(i / (ch.n - 1) * w, 0, Math.max(1, w / ch.n), h); }
+    }
+    ch.bg = bg;
+  }
+  drawCursor(player ? player.frame : 0, true);
+}
+const fmtNum = v => Math.abs(v) >= 100 ? v.toFixed(0) : Math.abs(v) >= 1 ? v.toFixed(2) : v.toFixed(3);
+
+let lastCursor = -1;
+function drawCursor(f, force) {
+  if (!force && f === lastCursor) return;
+  lastCursor = f;
+  for (const ch of CHARTS) {
+    if (!ch.bg) continue;
+    const g = ch.cv.getContext("2d");
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, ch.cv.width, ch.cv.height); g.drawImage(ch.bg, 0, 0);
+    const dpr = window.devicePixelRatio || 1;
+    g.scale(dpr, dpr);
+    const x = f / Math.max(1, ch.n - 1) * ch.w;
+    g.strokeStyle = "rgba(31,35,40,.55)"; g.lineWidth = 1; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, ch.h); g.stroke();
+    const vals = [];
+    for (const l of ch.lines) {
+      const v = l.y[f];
+      if (v != null) { const y = ch.h - (v - ch.lo) / (ch.hi - ch.lo) * ch.h; g.fillStyle = l.c; g.beginPath(); g.arc(x, y, 2.5, 0, 7); g.fill(); }
+      vals.push(`<span style="color:${l.c}">${v == null ? "NaN" : fmtNum(v)}</span>`);
+    }
+    ch.val.innerHTML = vals.join(" ");
+  }
+}
+let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(layoutCharts, 150); });
+
+// ------------------------------------------------------------------ 标签页
+function showTab(t) {
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  $("#ov").style.display = t === "ov" ? "" : "none";
+  $("#ep").style.display = t === "ep" ? "" : "none";
+  if (t !== "ep" && player) player.pause();
+  if (t === "ep") requestAnimationFrame(layoutCharts);
+  setHash();
+}
+// 点过的按钮不留焦点，免得空格键既触发按钮又触发播放/暂停
+document.addEventListener("click", ev => { const b = ev.target.closest("button"); if (b) b.blur(); });
+document.querySelector(".tabs").onclick = ev => { const b = ev.target.closest("button[data-tab]"); if (b) showTab(b.dataset.tab); };
+$("#dsSel").onchange = ev => { HASH.delete("ep"); openDataset(ev.target.value); };
+$("#rescan").onclick = () => loadList(DS?.path).then(() => toast("已刷新"));
+if (HASH.get("tab") === "ep") showTab("ep");
+loadList().catch(e => { $("#ov").innerHTML = `<div class="card issue error">连不上预览程序：${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
